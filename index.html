@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bird plumage color crossover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a field naturalist's reference plate — exact, quiet, the birds' own colors do the talking.
+   IDEA: Ridgway's color-standard plates: labelled chips on white, ruled grid, nothing extra.
+   PICTURE: the female × male matrix itself, swatch chips on both axes, ink density = frequency.
+   COLOUR and TYPE: white paper / ink black; plumage swatches are the only hues. Spectral titles, Public Sans text.
+   LAYOUT: modest title, controls row, matrix first; species drill-down and data import beneath. */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#121212);--ink:light-dark(#141414,#ececec);--mut:light-dark(#5e5e5e,#a3a3a3);--rule:light-dark(#dcdcdc,#333);--soft:light-dark(#f3f3f1,#1c1c1c);--sel:light-dark(#000,#fff)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Public Sans",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3.5vw,48px) max(5vw,16px);max-width:1240px;margin:0 auto}
+h1{font:600 clamp(30px,4.4vw,46px)/1.05 Spectral,Georgia,serif;margin:0 0 8px;text-wrap:balance}
+h2{font:600 24px/1.2 Spectral,Georgia,serif;margin:0 0 10px}
+.lede{color:var(--mut);max-width:68ch;margin:0}
+.stats{display:flex;flex-wrap:wrap;gap:6px 28px;margin:18px 0 0}
+.stats b{font:600 26px/1.1 Spectral,Georgia,serif;display:block}
+.stats span{color:var(--mut);font-size:14px}
+.ctl{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:end;margin:22px 0 18px;padding:14px 0;border-block:1px solid var(--rule)}
+.ctl label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--mut)}
+select,button,input[type=file]{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--rule);border-radius:6px;min-height:44px;padding:0 10px}
+button{cursor:pointer}
+.seg{display:flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:var(--bg);white-space:nowrap}
+@media(max-width:600px){.seg button{padding:0 8px;font-size:15px}}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+.chk{flex-direction:row!important;align-items:center;min-height:44px;color:var(--ink)!important}
+.chk input{width:20px;height:20px;margin:0}
+.wrap{overflow-x:auto;padding-bottom:6px}
+.mx{display:grid;gap:2px;min-width:420px}
+.mx div{display:flex;align-items:center;justify-content:center;font-size:13px;font-variant-numeric:tabular-nums}
+.ax{color:var(--mut);font-size:13px}
+.ch{flex-direction:column;gap:4px;justify-content:end!important;padding-bottom:4px}
+.ch i,.rh i{width:16px;height:16px;border-radius:3px;border:1px solid var(--rule);flex:none}
+.ch span{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+.rh{justify-content:flex-start!important;gap:6px;white-space:nowrap}
+.c{aspect-ratio:1;border-radius:3px;cursor:pointer;color:var(--ink);background:var(--soft)}
+.c.hot{color:var(--bg)}
+.c.on{outline:2px solid var(--sel);outline-offset:1px}
+.c.off{background:repeating-linear-gradient(135deg,transparent 0 4px,var(--rule) 4px 5px);cursor:default}
+.c.diag{box-shadow:inset 0 0 0 1px var(--mut)}
+.tot{color:var(--mut)}
+.axl{font:600 15px/1.2 "Public Sans",sans-serif;color:var(--ink)!important;letter-spacing:.02em}
+.axl.f{writing-mode:vertical-rl;transform:rotate(180deg)}
+.corner{font-size:13px;color:var(--mut);align-items:end!important;justify-content:start!important;line-height:1.2}
+.small .c{font-size:0}
+.note{color:var(--mut);font-size:14px;margin:10px 0 0}
+.detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;border-top:1px solid var(--rule)}
+@media(max-width:760px){.detail{grid-template-columns:minmax(0,1fr)}}
+ul.sp{list-style:none;padding:0;margin:0;max-height:420px;overflow:auto}
+ul.sp li{padding:8px 0;border-bottom:1px solid var(--rule)}
+ul.sp button{all:unset;cursor:pointer;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+ul.sp small{color:var(--mut);display:block;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-weight:600;color:var(--mut);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:14px;white-space:nowrap}
+.chip i{width:12px;height:12px;border-radius:2px;border:1px solid var(--rule)}
+details{border-top:1px solid var(--rule);padding-top:14px}
+summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+textarea{width:100%;min-height:120px;font:14px/1.4 ui-monospace,monospace;color:var(--ink);background:var(--soft);border:1px solid var(--rule);border-radius:6px;padding:8px}
+pre{background:var(--soft);padding:10px;border-radius:6px;font-size:13px;overflow-x:auto}
+.msg{font-size:14px;color:var(--mut);min-height:1.5em}
+.empty{color:var(--mut);padding:24px 0}
+.tabs{display:flex;gap:4px;max-width:1240px;margin:0 auto;padding:14px max(5vw,16px) 0;border-bottom:1px solid var(--rule)}
+.tabs a{display:flex;align-items:center;min-height:44px;padding:0 16px;color:var(--mut);text-decoration:none;font-weight:600;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs a[aria-current=page]{color:var(--ink);border-color:var(--ink)}
+[hidden]{display:none!important}
+.chipg{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 6px 0 12px;border:1px solid var(--ink);border-radius:22px;font-size:15px}
+.chipg button{border:0;min-height:36px;padding:0 8px}
+:root{--hl:#ff0a6c}
+.obs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:28px 44px;padding-block:34px;border-top:1px solid var(--rule)}
+.obs:first-of-type{border-top:0}
+@media(max-width:860px){.obs{grid-template-columns:minmax(0,1fr)}}
+.obs h2{font-size:clamp(24px,3vw,32px);line-height:1.12;text-wrap:balance}
+.obs .num{font:600 15px/1 "Public Sans",sans-serif;color:var(--mut);display:block;margin-bottom:10px}
+.obs p{max-width:62ch}
+.figs{display:grid;gap:22px;grid-template-columns:minmax(0,1fr)}
+.figs.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media(max-width:700px){.figs.two{grid-template-columns:minmax(0,1fr)}}
+.fig2 h4{margin:0 0 6px;font:600 16px/1.3 "Public Sans",sans-serif}
+.set{font-size:13px;color:var(--mut);margin:6px 0 0}
+.mini{display:grid;gap:1px;padding:10px 4px 0 0}
+.mini div{display:flex;align-items:center;justify-content:center;font-size:13px;font-variant-numeric:tabular-nums;position:relative}
+.mini .c{cursor:default}
+.mini .rh{font-size:13px}.mini .rh i,.mini .ch i{width:11px;height:11px}
+.mini .ch span{font-size:13px}
+.mini.tight .c{font-size:0}
+.mini .c.mark{outline:3px solid var(--hl);outline-offset:0;z-index:1;font-size:13px}
+.badge{position:absolute;top:-9px;left:-9px;width:20px;height:20px;border-radius:50%;background:var(--hl);color:#fff;font:700 12px/20px "Public Sans",sans-serif;text-align:center;display:block!important;z-index:2}
+ol.co{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:8px}
+ol.co li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;font-size:15px}
+ol.co b.n{width:22px;height:22px;border-radius:50%;background:var(--hl);color:#fff;font:700 12px/22px "Public Sans",sans-serif;text-align:center}
+ol.co strong{font-variant-numeric:tabular-nums}
+.obs .go{margin-top:12px}
+.plates{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin:20px 0 4px}
+.plates figure{margin:0}
+.plates img{width:100%;height:230px;object-fit:cover;border-radius:4px;display:block;background:var(--soft)}
+.plates figcaption{font-size:14px;line-height:1.4;margin-top:6px}
+.plates figcaption small{display:block;color:var(--mut);font-size:13px;margin-top:2px}
+.plates figcaption a{color:inherit}
+@media(max-width:420px){.plates img{height:180px}}
+</style>
+</head>
+<body>
+<nav class="tabs" aria-label="Views"><a href="#explorer" id="tabE" aria-current="page">Explorer</a><a href="#patterns" id="tabP">Patterns</a></nav>
+<main>
+<div id="viewE">
+<section class="band">
+<h1>Where a male bird has one color, what does the female wear?</h1>
+<p class="lede">Plumage colors of male and female birds, compared species by species. Each cell shows how often a female bird has one color in the same spot where the male of her species has another. Cells on the diagonal are colors both sexes share; everything off the diagonal is sexual dichromatism.</p>
+<div class="stats" id="stats"></div>
+
+<div class="ctl" role="group" aria-label="Matrix options">
+  <label>Compare by
+    <div class="seg" id="mode">
+      <button type="button" data-v="part" aria-pressed="true">Same body part</button>
+      <button type="button" data-v="body" aria-pressed="false">Whole body</button>
+    </div>
+  </label>
+  <label for="part">Body part<select id="part"></select></label>
+  <label for="ord">Order<select id="ord"></select></label>
+  <label for="fam">Family<select id="fam"></select></label>
+  <span class="chipg" id="grp" hidden><span id="grpName"></span><button type="button" id="grpX" aria-label="Clear group">✕</button></span>
+  <label>Cell values
+    <div class="seg" id="norm">
+      <button type="button" data-v="share" aria-pressed="true">% of all</button>
+      <button type="button" data-v="row" aria-pressed="false">% of female color</button>
+      <button type="button" data-v="col" aria-pressed="false">% of male color</button>
+    </div>
+  </label>
+  <label for="wt">Weighting<select id="wt">
+    <option value="spot">Each spot counts 1</option>
+    <option value="pair">Each color pair counts 1</option>
+  </select></label>
+  <label>Matching colors (diagonal)
+    <div class="seg" id="diagT">
+      <button type="button" data-v="in" aria-pressed="false">Included</button>
+      <button type="button" data-v="out" aria-pressed="true">Excluded</button>
+    </div>
+  </label>
+  <label class="chk" title="Wikipedia often skips the female when she looks like the male"><input type="checkbox" id="pres"> Presume female = male when female isn't described</label>
+</div>
+
+<div class="wrap"><div class="mx" id="mx"></div></div>
+<p class="note" id="note"></p>
+</section>
+
+<section class="band detail">
+  <div>
+    <h2 id="cellTitle">Species in a cell</h2>
+    <p class="note" id="cellHint">Tap a cell to list the species behind it.</p>
+    <ul class="sp" id="spList"></ul>
+  </div>
+  <div>
+    <h2 id="spTitle">Species plumage</h2>
+    <p class="note" id="spHint">Pick a species from the list to see its colors part by part.</p>
+    <div id="spTable"></div>
+  </div>
+</section>
+
+<section class="band">
+<details>
+<summary>Load your own data</summary>
+<p class="note">The default dataset is every species with a usable Wikipedia plumage description (eBird/Clements v2024 taxonomy), extracted by Claude. Replace it with a JSON file in the same format, or with CSV in long form. Records with only a <code>body</code> part (whole-body sources like Dale et al.) work in whole-body mode.</p>
+<pre>species,sci,order,family,sex,part,color
+Northern cardinal,Cardinalis cardinalis,Passeriformes,Cardinalidae,male,breast,red
+Northern cardinal,Cardinalis cardinalis,Passeriformes,Cardinalidae,female,breast,buff</pre>
+<p><input type="file" id="file" accept=".json,.csv,.txt" aria-label="Data file"></p>
+<textarea id="paste" placeholder="…or paste JSON or CSV here" aria-label="Paste data"></textarea>
+<p><button type="button" id="load">Load pasted data</button> <button type="button" id="reset">Back to full dataset</button></p>
+<p class="msg" id="msg" role="status"></p>
+</details>
+</section>
+</div>
+
+<div id="viewP" hidden>
+<section class="band">
+<h1>Three things the plumage of 5,700 bird species says about how females differ</h1>
+<p class="lede">Each figure is the explorer's matrix at fixed settings, chosen to tell one story. Numbered cells match the callouts. Only spots where the sexes differ are counted (diagonal excluded). Use “Open in explorer” to poke at any of them.</p>
+
+<article class="obs" id="o1">
+ <div>
+  <span class="num">Observation 1</span>
+  <h2>Females are usually brown where males are colorful, but not where males are yellow: there they are green</h2>
+  <p>For most male colors, the single most common thing the female wears instead is brown, the familiar drab, melanin-based female. Yellow breaks the rule. Where a male is yellow and the female differs, she is far more often olive-green than brown.</p>
+  <p>A likely reason is that olive-green is usually the same yellow carotenoid with melanin laid over it. The female keeps the male's pigment and adds a darkening layer rather than switching to a different color. Finches, parrots, weavers and orioles carry most of this pattern.</p>
+<div class="plates"><figure><img src="img/goldfinch.jpg" alt="" loading="lazy" style="object-position:50% 30%"><figcaption><b>American goldfinch.</b> Black-and-yellow male above, olive-green female below: same yellow, more melanin.<small>Audubon, <i>Birds of America</i> pl. 33, 1828 · public domain · <a href="https://commons.wikimedia.org/wiki/File:33_American_Goldfinch.jpg">Wikimedia Commons</a></small></figcaption></figure><figure><img src="img/redwing.jpg" alt="" loading="lazy" style="object-position:50% 55%"><figcaption><b>Red-winged blackbird.</b> The usual case: black, red-shouldered male; streaky brown females.<small>Audubon, <i>Birds of America</i> pl. 67, 1829 · public domain · <a href="https://commons.wikimedia.org/wiki/File:67_Red-winged_Starling_or_Marsh_Blackbird.jpg">Wikimedia Commons</a></small></figcaption></figure></div>
+  <ol class="co" data-for="m1"></ol>
+  <button type="button" class="go" data-go="m1">Open in explorer</button>
+ </div>
+ <div class="figs"><div class="fig2"><h4>All birds · cells as % of the male's color (columns sum to 100)</h4><div class="mini" id="m1"></div><p class="set" data-set="m1"></p></div></div>
+</article>
+
+<article class="obs" id="o2">
+ <div>
+  <span class="num">Observation 2</span>
+  <h2>Blue and green trade places in two different ways</h2>
+  <p>In <strong>hummingbirds and parrots</strong>, blue and green swap in both directions, and so do yellow and green. That fits green being a stack of blue feather structure with yellow pigment on top, from which either sex can lose a layer and end up blue or yellow.</p>
+  <p>In <strong>manakins, tanagers and finches</strong>, the swap runs one way only. Males are blue or black, females are green, and almost never the reverse. Here the female's olive isn't “blue minus something” but the group's default camouflage plumage.</p>
+<div class="plates"><figure><img src="img/eclectus.jpg" alt="" loading="lazy" style="object-position:50% 30%"><figcaption><b>New Guinea eclectus.</b> Look at the belly: green in the male (front), blue in the female (behind). Her red is a separate swap, green ↔ red, which parrots also do often.<small>Greene, <i>Parrots in Captivity</i> vol. 3 pl. 19, 1887 · public domain · <a href="https://commons.wikimedia.org/wiki/File:Parrots_in_captivity_(Vol._3._PL._19)_Red-Sided_or_New_Guinea_Eclectus_(8527258427).jpg">Wikimedia Commons</a></small></figcaption></figure><figure><img src="img/goeldi.jpg" alt="" loading="lazy" style="object-position:50% 60%"><figcaption><b>Amazonian manakins and dacnises.</b> Black and blue males among plain olive-green birds, which in these groups are typically the females.<small>Göldi, <i>Album de aves amazonicas</i> pl. 17, 1900 · public domain · <a href="https://commons.wikimedia.org/wiki/File:Album_de_aves_amazonicas_(Plate_17)_(7139387173).jpg">Wikimedia Commons</a></small></figcaption></figure></div>
+  <ol class="co" data-for="m2a,m2b"></ol>
+  <button type="button" class="go" data-go="m2a">Open hummingbirds + parrots</button> <button type="button" class="go" data-go="m2b">Open manakins + tanagers + finches</button>
+ </div>
+ <div class="figs">
+  <div class="fig2"><h4>Hummingbirds + parrots · % of all differing pairs</h4><div class="mini" id="m2a"></div><p class="set" data-set="m2a"></p></div>
+  <div class="fig2"><h4>Manakins + tanagers + finches · % of all differing pairs</h4><div class="mini" id="m2b"></div><p class="set" data-set="m2b"></p></div>
+ </div>
+</article>
+
+<article class="obs" id="o3">
+ <div>
+  <span class="num">Observation 3</span>
+  <h2>In iridescent birds, the male adds metal; the female stays pale</h2>
+  <p>Among hummingbirds and sunbirds, the biggest sex differences are spots where the male is metallic green and the female plain white or grey: gorgets, breasts, bellies. Purple and violet, which come from tuning the same thin-film structure, show up almost only in males. Green females opposite purple males are common, while the reverse barely exists.</p>
+  <p>Caveat: iridescent hues shift with viewing angle, and text descriptions of them vary, so some green/blue/purple pairs may be wording rather than biology.</p>
+<div class="plates"><figure><img src="img/sunbird.jpg" alt="" loading="lazy" style="object-position:50% 35%"><figcaption><b>Malachite sunbird.</b> Metallic-green male above; plain, streaky olive-grey female below.<small>Keulemans in Shelley, <i>Monograph of the Nectariniidae</i>, 1880 · public domain · <a href="https://commons.wikimedia.org/wiki/File:Nectarinia_famosa_Keulemans.jpg">Wikimedia Commons</a></small></figcaption></figure><figure><img src="img/woodstar.jpg" alt="" loading="lazy" style="object-position:50% 55%"><figcaption><b>Amethyst woodstar.</b> Males (below) wear violet throats; the paler, rufous-flanked birds above lack them.<small>Gould &amp; Richter, <i>Monograph of the Trochilidae</i>, 1861 · public domain · <a href="https://commons.wikimedia.org/wiki/File:MonographTrochi3Goul_0180.jpg">Wikimedia Commons</a></small></figcaption></figure></div>
+  <ol class="co" data-for="m3"></ol>
+  <button type="button" class="go" data-go="m3">Open in explorer</button>
+ </div>
+ <div class="figs"><div class="fig2"><h4>Hummingbirds + sunbirds · % of all differing pairs</h4><div class="mini" id="m3"></div><p class="set" data-set="m3"></p></div></div>
+</article>
+<p class="note">Data: Wikipedia species descriptions, machine-extracted by Claude into 13 colors × 7 body parts; adult (breeding) plumage; each body part of each species weighs 1. Spot-checked against Delhey &amp; Peters (2017), not hand-verified.</p>
+</section>
+</div>
+</main>
+
+<script id="pilot" type="application/json">[{"species":"Northern cardinal","sci":"Cardinalis cardinalis","order":"Passeriformes","family":"Cardinalidae","male":{"head":["black","red"],"throat":["black"],"breast":["red"],"belly":[],"back":["red"],"wings":["red"],"tail":[]},"female":{"head":["black","brown","grey","red"],"throat":[],"breast":["brown","buff"],"belly":[],"back":["brown","grey"],"wings":["brown","grey","red"],"tail":["brown","red"]},"source":"Wikipedia (pilot extraction)"},{"species":"Superb fairywren","sci":"Malurus cyaneus","order":"Passeriformes","family":"Maluridae","male":{"head":["black","blue"],"throat":["black","blue"],"breast":["black"],"belly":[],"back":["blue"],"wings":["brown"],"tail":["blue"]},"female":{"head":["brown","buff"],"throat":["brown","buff"],"breast":["brown","buff"],"belly":["buff"],"back":["brown","buff"],"wings":["brown","buff"],"tail":["brown","buff"]},"source":"Wikipedia (pilot extraction)"},{"species":"Mallard","sci":"Anas platyrhynchos","order":"Anseriformes","family":"Anatidae","male":{"head":["green"],"throat":["white"],"breast":["brown","purple"],"belly":["grey"],"back":[],"wings":["blue","brown","grey","purple","white"],"tail":["black","white"]},"female":{"head":["brown","buff"],"throat":["buff"],"breast":["brown","buff"],"belly":[],"back":[],"wings":["blue","brown","buff","purple","white"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Eclectus parrot","sci":"Eclectus roratus","order":"Psittaciformes","family":"Psittaculidae","male":{"head":["green"],"throat":[],"breast":[],"belly":[],"back":["green"],"wings":["blue","green","red"],"tail":[]},"female":{"head":["red"],"throat":[],"breast":[],"belly":["blue"],"back":["red"],"wings":["red"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Scarlet tanager","sci":"Piranga olivacea","order":"Passeriformes","family":"Cardinalidae","male":{"head":["red"],"throat":["red"],"breast":["red"],"belly":["red"],"back":["red"],"wings":["black"],"tail":["black"]},"female":{"head":["green"],"throat":["yellow"],"breast":["yellow"],"belly":["yellow"],"back":["green"],"wings":["green","yellow"],"tail":["green","yellow"]},"source":"Wikipedia (pilot extraction)"},{"species":"Painted bunting","sci":"Passerina ciris","order":"Passeriformes","family":"Cardinalidae","male":{"head":["blue"],"throat":["red"],"breast":["red"],"belly":["red"],"back":["green"],"wings":[],"tail":[]},"female":{"head":["green","yellow"],"throat":["green","yellow"],"breast":["green","yellow"],"belly":["green","yellow"],"back":["green","yellow"],"wings":["green","yellow"],"tail":["green","yellow"]},"source":"Wikipedia (pilot extraction)"},{"species":"American goldfinch","sci":"Spinus tristis","order":"Passeriformes","family":"Fringillidae","male":{"head":["black"],"throat":["yellow"],"breast":["yellow"],"belly":["yellow"],"back":["yellow"],"wings":["black"],"tail":["black","white"]},"female":{"head":["brown"],"throat":["yellow"],"breast":["brown"],"belly":["brown"],"back":["brown"],"wings":["brown"],"tail":["brown","white"]},"source":"Wikipedia (pilot extraction)"},{"species":"Red-winged blackbird","sci":"Agelaius phoeniceus","order":"Passeriformes","family":"Icteridae","male":{"head":["black"],"throat":["black"],"breast":["black"],"belly":["black"],"back":["black"],"wings":["black","red","yellow"],"tail":["black"]},"female":{"head":["brown","white"],"throat":["pink"],"breast":["black","white"],"belly":["black","white"],"back":["brown"],"wings":["brown","red"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Baltimore oriole","sci":"Icterus galbula","order":"Passeriformes","family":"Icteridae","male":{"head":["black"],"throat":["orange"],"breast":["orange"],"belly":["orange"],"back":["black"],"wings":["black","orange","white"],"tail":["black"]},"female":{"head":["brown","yellow"],"throat":[],"breast":["orange","yellow"],"belly":["orange","yellow"],"back":["brown","yellow"],"wings":["brown"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Eastern bluebird","sci":"Sialia sialis","order":"Passeriformes","family":"Turdidae","male":{"head":["blue"],"throat":[],"breast":["brown","red"],"belly":[],"back":["blue"],"wings":["blue"],"tail":[]},"female":{"head":["grey"],"throat":[],"breast":["orange"],"belly":[],"back":["grey"],"wings":["blue"],"tail":["blue"]},"source":"Wikipedia (pilot extraction)"},{"species":"Common blackbird","sci":"Turdus merula","order":"Passeriformes","family":"Turdidae","male":{"head":["black","yellow"],"throat":["black"],"breast":["black"],"belly":["black"],"back":["black"],"wings":["black"],"tail":["black"]},"female":{"head":["brown"],"throat":["brown","white"],"breast":["brown"],"belly":["brown"],"back":["brown"],"wings":["brown"],"tail":["brown"]},"source":"Wikipedia (pilot extraction)"},{"species":"House sparrow","sci":"Passer domesticus","order":"Passeriformes","family":"Passeridae","male":{"head":["black","brown","grey","white"],"throat":["black"],"breast":["black","grey","white"],"belly":["grey","white"],"back":["black","brown","grey"],"wings":[],"tail":[]},"female":{"head":["brown"],"throat":[],"breast":["brown","grey"],"belly":["brown","grey"],"back":["brown","buff"],"wings":[],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Common chaffinch","sci":"Fringilla coelebs","order":"Passeriformes","family":"Fringillidae","male":{"head":["black","blue","grey"],"throat":["rufous"],"breast":["rufous"],"belly":["buff","pink"],"back":["blue","brown","green","grey"],"wings":["black","buff","white","yellow"],"tail":["black","grey","white"]},"female":{"head":["brown","grey"],"throat":[],"breast":[],"belly":[],"back":["brown","green","grey"],"wings":["black","buff","white","yellow"],"tail":["black","grey","white"]},"source":"Wikipedia (pilot extraction)"},{"species":"Eurasian bullfinch","sci":"Pyrrhula pyrrhula","order":"Passeriformes","family":"Fringillidae","male":{"head":["black"],"throat":[],"breast":["red"],"belly":["red"],"back":["grey"],"wings":["black","white"],"tail":[]},"female":{"head":["black"],"throat":[],"breast":["buff","grey"],"belly":["buff","grey"],"back":["grey"],"wings":["black","white"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Black-throated blue warbler","sci":"Setophaga caerulescens","order":"Passeriformes","family":"Parulidae","male":{"head":["black"],"throat":["black"],"breast":["white"],"belly":["white"],"back":["blue"],"wings":["white"],"tail":[]},"female":{"head":["brown","grey"],"throat":["yellow"],"breast":["yellow"],"belly":["yellow"],"back":["brown"],"wings":["white"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Common yellowthroat","sci":"Geothlypis trichas","order":"Passeriformes","family":"Parulidae","male":{"head":["black","grey","white"],"throat":["yellow"],"breast":["yellow"],"belly":["white"],"back":["green"],"wings":["green"],"tail":["green"]},"female":{"head":[],"throat":["yellow"],"breast":["yellow"],"belly":["white"],"back":["green"],"wings":["green"],"tail":["green"]},"source":"Wikipedia (pilot extraction)"},{"species":"Vermilion flycatcher","sci":"Pyrocephalus obscurus","order":"Passeriformes","family":"Tyrannidae","male":{"head":["black","brown","red"],"throat":[],"breast":["red"],"belly":["red"],"back":["black","brown"],"wings":["black","brown"],"tail":["black","brown"]},"female":{"head":["grey"],"throat":[],"breast":["white"],"belly":["orange","pink"],"back":["grey"],"wings":["grey"],"tail":["grey"]},"source":"Wikipedia (pilot extraction)"},{"species":"Satin bowerbird","sci":"Ptilonorhynchus violaceus","order":"Passeriformes","family":"Ptilonorhynchidae","male":{"head":["black","blue"],"throat":["black","blue"],"breast":["black","blue"],"belly":["black","blue"],"back":["black","blue"],"wings":["black","blue"],"tail":["black","blue"]},"female":{"head":[],"throat":[],"breast":[],"belly":[],"back":["brown","green"],"wings":["brown","green"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Australian golden whistler","sci":"Pachycephala pectoralis","order":"Passeriformes","family":"Pachycephalidae","male":{"head":["black","yellow"],"throat":["white"],"breast":["black","yellow"],"belly":["yellow"],"back":["green"],"wings":["green"],"tail":[]},"female":{"head":["brown","grey"],"throat":["brown","grey"],"breast":["brown","grey"],"belly":["brown","grey"],"back":["brown","grey"],"wings":["brown","grey"],"tail":["brown","grey"]},"source":"Wikipedia (pilot extraction)"},{"species":"Mistletoebird","sci":"Dicaeum hirundinaceum","order":"Passeriformes","family":"Dicaeidae","male":{"head":["black","blue"],"throat":["red"],"breast":["red"],"belly":["black","white"],"back":["black","blue"],"wings":["black","blue"],"tail":["red"]},"female":{"head":["grey"],"throat":["white"],"breast":["grey"],"belly":["grey"],"back":["grey"],"wings":["grey"],"tail":["pink","red"]},"source":"Wikipedia (pilot extraction)"},{"species":"House finch","sci":"Haemorhous mexicanus","order":"Passeriformes","family":"Fringillidae","male":{"head":["red"],"throat":[],"breast":[],"belly":["red"],"back":["brown","red"],"wings":["grey"],"tail":["brown"]},"female":{"head":["brown"],"throat":[],"breast":[],"belly":[],"back":["brown"],"wings":["grey"],"tail":["brown"]},"source":"Wikipedia (pilot extraction)"},{"species":"Indigo bunting","sci":"Passerina cyanea","order":"Passeriformes","family":"Cardinalidae","male":{"head":["blue"],"throat":["blue"],"breast":["blue"],"belly":["blue"],"back":["blue"],"wings":["black","blue"],"tail":["black","blue"]},"female":{"head":["brown"],"throat":["brown"],"breast":["brown"],"belly":["brown"],"back":["brown"],"wings":[],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Blue jay","sci":"Cyanocitta cristata","order":"Passeriformes","family":"Corvidae","male":{"head":["black","blue","white"],"throat":["black"],"breast":["white"],"belly":["white"],"back":["blue"],"wings":["black","blue","white"],"tail":["black","blue","white"]},"female":{"head":["black","blue","white"],"throat":["black"],"breast":["white"],"belly":["white"],"back":["blue"],"wings":["black","blue","white"],"tail":["black","blue","white"]},"source":"Wikipedia (pilot extraction)"},{"species":"Red-backed fairywren","sci":"Malurus melanocephalus","order":"Passeriformes","family":"Maluridae","male":{"head":["black"],"throat":["black"],"breast":["black"],"belly":["black"],"back":["orange","red"],"wings":["brown"],"tail":["black"]},"female":{"head":["brown","buff","yellow"],"throat":[],"breast":["brown","buff"],"belly":["white"],"back":["brown"],"wings":["brown"],"tail":["brown"]},"source":"Wikipedia (pilot extraction)"},{"species":"Wood duck","sci":"Aix sponsa","order":"Anseriformes","family":"Anatidae","male":{"head":[],"throat":["white"],"breast":[],"belly":[],"back":[],"wings":["blue","green","white"],"tail":[]},"female":{"head":[],"throat":["white"],"breast":[],"belly":[],"back":[],"wings":["blue","green","white"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Common pheasant","sci":"Phasianus colchicus","order":"Galliformes","family":"Phasianidae","male":{"head":["green","red"],"throat":[],"breast":["brown","green","orange","purple","red","rufous","yellow"],"belly":["brown","green","orange","purple","red","rufous","yellow"],"back":["brown","green","orange","purple","red","rufous","yellow"],"wings":["buff","white"],"tail":["black","brown"]},"female":{"head":["brown"],"throat":["brown"],"breast":["brown"],"belly":["brown"],"back":["brown"],"wings":["brown"],"tail":["brown"]},"source":"Wikipedia (pilot extraction)"},{"species":"Indian peafowl","sci":"Pavo cristatus","order":"Galliformes","family":"Phasianidae","male":{"head":["blue","green","white"],"throat":["green"],"breast":["green"],"belly":["black","brown"],"back":["black","green"],"wings":["black","rufous"],"tail":["black","blue","brown","green","purple"]},"female":{"head":["brown","green","rufous"],"throat":[],"breast":["brown","green"],"belly":["white"],"back":["brown"],"wings":["brown"],"tail":["brown"]},"source":"Wikipedia (pilot extraction)"},{"species":"Ruby-throated hummingbird","sci":"Archilochus colubris","order":"Apodiformes","family":"Trochilidae","male":{"head":["green"],"throat":["black","red"],"breast":["grey","white"],"belly":["grey","white"],"back":["green"],"wings":["black"],"tail":["black","purple"]},"female":{"head":["green"],"throat":["grey","white"],"breast":["grey","white"],"belly":["grey","white"],"back":["green"],"wings":["black"],"tail":["black","green","white"]},"source":"Wikipedia (pilot extraction)"},{"species":"Anna's hummingbird","sci":"Calypte anna","order":"Apodiformes","family":"Trochilidae","male":{"head":["pink","red"],"throat":["pink","red"],"breast":["grey"],"belly":["grey"],"back":["green"],"wings":[],"tail":["black"]},"female":{"head":["green"],"throat":["grey","red"],"breast":["grey"],"belly":["grey"],"back":["green"],"wings":[],"tail":["black","white"]},"source":"Wikipedia (pilot extraction)"},{"species":"Belted kingfisher","sci":"Megaceryle alcyon","order":"Coraciiformes","family":"Alcedinidae","male":{"head":["blue"],"throat":[],"breast":["blue"],"belly":["white"],"back":["black","blue"],"wings":["black","blue","white"],"tail":[]},"female":{"head":["blue"],"throat":[],"breast":["blue"],"belly":["rufous","white"],"back":["black","blue"],"wings":["black","blue","white"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Red-necked phalarope","sci":"Phalaropus lobatus","order":"Charadriiformes","family":"Scolopacidae","male":{"head":[],"throat":[],"breast":[],"belly":[],"back":[],"wings":[],"tail":[]},"female":{"head":["black"],"throat":["white"],"breast":["rufous"],"belly":[],"back":["grey"],"wings":["white"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"American kestrel","sci":"Falco sparverius","order":"Falconiformes","family":"Falconidae","male":{"head":["black","blue","grey","white"],"throat":[],"breast":["black","white"],"belly":["black","white"],"back":["rufous"],"wings":["black","blue","grey"],"tail":["black","rufous","white"]},"female":{"head":["black","blue","grey","white"],"throat":[],"breast":["brown","buff"],"belly":["brown","buff"],"back":["brown","rufous"],"wings":["brown","rufous"],"tail":["black","rufous"]},"source":"Wikipedia (pilot extraction)"},{"species":"Northern flicker","sci":"Colaptes auratus","order":"Piciformes","family":"Picidae","male":{"head":["black","buff","grey","red"],"throat":[],"breast":["black","buff"],"belly":["black","buff"],"back":["black","brown"],"wings":["black","brown","red","yellow"],"tail":["black","red","yellow"]},"female":{"head":[],"throat":[],"breast":["black","buff"],"belly":["black","buff"],"back":["black","brown"],"wings":["black","brown","red","yellow"],"tail":["black","red","yellow"]},"source":"Wikipedia (pilot extraction)"},{"species":"Resplendent quetzal","sci":"Pharomachrus mocinno","order":"Trogoniformes","family":"Trogonidae","male":{"head":["green"],"throat":[],"breast":["red"],"belly":["red"],"back":["green"],"wings":["black"],"tail":["green","white"]},"female":{"head":["green"],"throat":[],"breast":["grey"],"belly":["grey"],"back":[],"wings":[],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Downy woodpecker","sci":"Dryobates pubescens","order":"Piciformes","family":"Picidae","male":{"head":["black","red","white"],"throat":["white"],"breast":[],"belly":["white"],"back":["white"],"wings":["black","white"],"tail":["black","white"]},"female":{"head":["black","white"],"throat":["white"],"breast":[],"belly":["white"],"back":["white"],"wings":["black","white"],"tail":["black","white"]},"source":"Wikipedia (pilot extraction)"},{"species":"Mandarin duck","sci":"Aix galericulata","order":"Anseriformes","family":"Anatidae","male":{"head":["purple","red","white"],"throat":[],"breast":["purple","white"],"belly":["rufous"],"back":[],"wings":["orange"],"tail":[]},"female":{"head":["brown","grey","white"],"throat":[],"breast":["brown","grey"],"belly":["grey"],"back":["brown","grey"],"wings":["brown","grey"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Scarlet robin","sci":"Petroica boodang","order":"Passeriformes","family":"Petroicidae","male":{"head":["black","white"],"throat":[],"breast":["red"],"belly":["white"],"back":["black"],"wings":["black","white"],"tail":["black"]},"female":{"head":["brown"],"throat":[],"breast":["red"],"belly":["buff"],"back":["brown"],"wings":["brown","white"],"tail":["brown"]},"source":"Wikipedia (pilot extraction)"},{"species":"Golden pheasant","sci":"Chrysolophus pictus","order":"Galliformes","family":"Phasianidae","male":{"head":["rufous","yellow"],"throat":["rufous"],"breast":["red"],"belly":["red","rufous"],"back":["black","green","orange","yellow"],"wings":["blue","red"],"tail":["black","buff","rufous"]},"female":{"head":["buff"],"throat":["buff"],"breast":["black","brown","buff"],"belly":["buff"],"back":["brown"],"wings":[],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Common ostrich","sci":"Struthio camelus","order":"Struthioniformes","family":"Struthionidae","male":{"head":[],"throat":[],"breast":[],"belly":[],"back":["black"],"wings":["black","white"],"tail":["buff","white"]},"female":{"head":[],"throat":[],"breast":[],"belly":[],"back":["brown","grey"],"wings":["brown","grey","white"],"tail":["brown","grey","white"]},"source":"Wikipedia (pilot extraction)"},{"species":"Rainbow lorikeet","sci":"Trichoglossus moluccanus","order":"Psittaciformes","family":"Psittaculidae","male":{"head":["blue"],"throat":[],"breast":["orange","yellow"],"belly":["blue"],"back":["green"],"wings":["green","red","yellow"],"tail":["green"]},"female":{"head":["blue"],"throat":[],"breast":["orange","yellow"],"belly":["blue"],"back":["green"],"wings":["green","red","yellow"],"tail":["green"]},"source":"Wikipedia (pilot extraction)"},{"species":"King eider","sci":"Somateria spectabilis","order":"Anseriformes","family":"Anatidae","male":{"head":["blue","green","grey"],"throat":[],"breast":["buff","white"],"belly":[],"back":["black"],"wings":[],"tail":[]},"female":{"head":["black","brown","buff"],"throat":[],"breast":["brown"],"belly":["brown"],"back":["black","brown"],"wings":["black","brown"],"tail":[]},"source":"Wikipedia (pilot extraction)"},{"species":"Black-headed grosbeak","sci":"Pheucticus melanocephalus","order":"Passeriformes","family":"Cardinalidae","male":{"head":["black"],"throat":[],"breast":["orange"],"belly":["yellow"],"back":[],"wings":["black","white"],"tail":["black","white"]},"female":{"head":["brown","white"],"throat":[],"breast":["white"],"belly":[],"back":["brown"],"wings":["brown","grey","white","yellow"],"tail":["brown","grey"]},"source":"Wikipedia (pilot extraction)"}]</script>
+<script>
+{
+const SW={black:"#1b1b1b",grey:"#9a9a9a",white:"#ffffff",brown:"#7a5230",rufous:"#b5552b",buff:"#e3c79a",yellow:"#f2d21b",orange:"#f08a1c",red:"#d12a2a",pink:"#f19bb5",purple:"#6d3a8c",blue:"#2f62c9",green:"#3c8a3c"};
+const BASE=Object.keys(SW);
+const PILOT=JSON.parse(document.getElementById('pilot').textContent);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=id=>document.getElementById(id);
+let FULL=null;
+const S={fams:null,grpName:'',data:PILOT,mode:'part',part:'all',ord:'all',fam:'all',norm:'share',wt:'spot',noDiag:true,pres:false,cell:null,sp:null,src:'pilot'};
+
+function cleanList(v){if(!Array.isArray(v))return[];return [...new Set(v.map(x=>String(x).trim().toLowerCase()).filter(x=>x&&x!=='?'))]}
+function normalize(arr){
+  return arr.filter(r=>r&&r.species&&r.male&&r.female).map(r=>{
+    const o={species:String(r.species),sci:String(r.sci||''),order:String(r.order||'Unknown'),family:String(r.family||'Unknown'),male:{},female:{}};
+    for(const s of ['male','female'])for(const p in r[s]){const l=cleanList(r[s][p]);if(l.length)o[s][p.toLowerCase()]=l}
+    return o})}
+function parseCSV(t){
+  const rows=t.trim().split(/\r?\n/).map(l=>{const out=[];let cur='',q=false;for(const ch of l){if(ch=='"'){q=!q}else if(ch==','&&!q){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out.map(x=>x.trim())});
+  const h=rows.shift().map(x=>x.toLowerCase());const ix=k=>h.indexOf(k);
+  for(const k of['species','sex','part','color'])if(ix(k)<0)throw new Error('CSV needs columns species, sex, part, color');
+  const m=new Map();
+  for(const r of rows){const sp=r[ix('species')];if(!sp)continue;
+    if(!m.has(sp))m.set(sp,{species:sp,sci:ix('sci')>=0?r[ix('sci')]:'',order:ix('order')>=0?r[ix('order')]:'',family:ix('family')>=0?r[ix('family')]:'',male:{},female:{}});
+    const o=m.get(sp),sex=(r[ix('sex')]||'').toLowerCase().startsWith('f')?'female':'male',p=(r[ix('part')]||'body').toLowerCase();
+    (o[sex][p]=o[sex][p]||[]).push(r[ix('color')])}
+  return [...m.values()]}
+
+function colorsOf(d){const set=new Set();for(const r of d)for(const s of['male','female'])for(const p in r[s])r[s][p].forEach(c=>set.add(c));
+  return [...BASE.filter(c=>set.has(c)),...[...set].filter(c=>!BASE.includes(c)).sort()]}
+function partsOf(d){const set=new Set();for(const r of d)for(const p in r.male)if(r.female[p])set.add(p);
+  const order=['head','throat','breast','belly','back','wings','tail','body'];return [...order.filter(p=>set.has(p)),...[...set].filter(p=>!order.includes(p)).sort()]}
+function filtered(){return S.data.filter(r=>(S.ord==='all'||r.order===S.ord)&&(S.fam==='all'||r.family===S.fam)&&(!S.fams||S.fams.has(r.family)))}
+
+const noFem=r=>!Object.values(r.female).some(l=>l.length);
+function fem(r){return S.pres&&noFem(r)?r.male:r.female}
+function units(r){ // list of {part, m:[], f:[]}
+  const F=fem(r);
+  if(S.mode==='body'){const m=new Set(),f=new Set();for(const p in r.male)r.male[p].forEach(c=>m.add(c));for(const p in F)F[p].forEach(c=>f.add(c));
+    return m.size&&f.size?[{part:'whole body',m:[...m],f:[...f]}]:[]}
+  const out=[];for(const p in r.male){if(S.part!=='all'&&p!==S.part)continue;const f=F[p];if(f&&f.length&&r.male[p].length)out.push({part:p,m:r.male[p],f})}
+  return out}
+
+function compute(){
+  const d=filtered(),cols=colorsOf(S.data),n=cols.length,M=Array.from({length:n},()=>Array(n).fill(0)),who=new Map(),idx=Object.fromEntries(cols.map((c,i)=>[c,i]));
+  let spp=0,spots=0,same=0;
+  for(const r of d){const us=units(r);if(!us.length)continue;spp++;
+    for(const u of us){spots++;const w=S.wt==='spot'?1/(u.m.length*u.f.length):1;
+      const fs=new Set(u.f),ms=new Set(u.m);if(fs.size===ms.size&&[...fs].every(c=>ms.has(c)))same++;
+      for(const f of u.f)for(const m of u.m){const i=idx[f],j=idx[m];M[i][j]+=w;const k=i+','+j;if(!who.has(k))who.set(k,new Map());const e=who.get(k);(e.get(r.species)||e.set(r.species,[]).get(r.species)).push(u.part)}}}
+  return {cols,M,who,spp,spots,same}}
+
+let R=null;
+function render(){
+  R=compute();const {cols,M,spp,spots,same}=R,n=cols.length;
+  let diag=0;for(let i=0;i<n;i++)diag+=M[i][i];
+  const D=M.map((r,i)=>r.map((v,j)=>S.noDiag&&i===j?0:v)); // values used for percentages
+  const rs=D.map(r=>r.reduce((a,b)=>a+b,0)),cs=cols.map((_,j)=>D.reduce((a,r)=>a+r[j],0)),T=rs.reduce((a,b)=>a+b,0),TA=T+(S.noDiag?diag:0);
+  $('stats').innerHTML=`<div><b>${spp}</b><span>species shown</span></div><div><b>${spots}</b><span>${S.mode==='body'?'whole-body comparisons':'body parts compared'}</span></div><div><b>${spots?Math.round(100*(spots-same)/spots):0}%</b><span>of those differ between sexes</span></div><div><b>${TA?Math.round(100*diag/TA):0}%</b><span>of pairs on the diagonal</span></div>`;
+  const val=(i,j)=>{const v=D[i][j];if(S.norm==='row')return rs[i]?100*v/rs[i]:0;if(S.norm==='col')return cs[j]?100*v/cs[j]:0;return T?100*v/T:0};
+  let mx=0;for(let i=0;i<n;i++)for(let j=0;j<n;j++){if(S.noDiag&&i===j)continue;mx=Math.max(mx,val(i,j))}
+  const fmt=v=>!v?'':(v>=9.95?Math.round(v):v.toFixed(1));
+  const g=$('mx');const narrow=g.parentElement.clientWidth<560;g.classList.toggle('small',narrow);
+  g.style.gridTemplateColumns=`22px ${narrow?'72px':'92px'} repeat(${n},minmax(0,1fr))`;
+  let h=`<div></div><div></div><div class="axl" style="grid-column:span ${n}">Male ♂</div>`;
+  h+=`<div class="axl f" style="grid-row:span ${n+1}">Female ♀</div><div class="corner"></div>`;
+  h+=cols.map(c=>`<div class="ch" title="male ${esc(c)}"><span>${esc(c)}</span><i style="background:${SW[c]||'#ccc'}"></i></div>`).join('');
+  for(let i=0;i<n;i++){h+=`<div class="rh"><i style="background:${SW[cols[i]]||'#ccc'}"></i>${esc(cols[i])}</div>`;
+    for(let j=0;j<n;j++){const v=val(i,j),a=mx?v/mx:0,on=S.cell&&S.cell[0]===i&&S.cell[1]===j;
+      if(S.noDiag&&i===j){h+=`<div class="c off" aria-label="female and male ${esc(cols[i])}: excluded"></div>`;continue}
+      const bg=v?`color-mix(in srgb,var(--ink) ${Math.round(8+a*87)}%,var(--bg))`:'';
+      h+=`<div class="c${a>.5?' hot':''}${on?' on':''}${i===j?' diag':''}" role="button" tabindex="0" data-i="${i}" data-j="${j}" aria-label="female ${esc(cols[i])}, male ${esc(cols[j])}: ${fmt(v)||0}" style="${bg?'background:'+bg:''}">${fmt(v)}</div>`}
+  }
+  g.innerHTML=spp?h:'<p class="empty">No species have colors for both sexes under these filters.</p>';
+  $('note').textContent=(S.wt==='spot'?'Each body part of each species adds up to 1, split across its female × male color pairs. ':'Every female × male color pair in a spot counts 1, so multicolored spots weigh more. ')+(narrow?'Values hidden at this width — tap a cell for the species list.':(S.noDiag?'Matching colors are left out: percentages cover only spots where the sexes differ.':'Diagonal cells are outlined.'))+(S.pres?` ${S.data.filter(r=>noFem(r)&&Object.values(r.male).some(l=>l.length)).length} species with no female description are counted as monochromatic.`:'')+(S.src==='full'?` ${S.data.length.toLocaleString()} species from Wikipedia text, machine-extracted; spot-checked against Delhey & Peters (2017), not hand-verified.`:S.src==='pilot'?' Pilot data: 42 species (full dataset failed to load).':'');
+  renderCell()}
+
+function renderCell(){
+  const L=$('spList');if(!S.cell||!R){L.innerHTML='';$('cellTitle').textContent='Species in a cell';$('cellHint').hidden=false;return}
+  const [i,j]=S.cell,e=R.who.get(i+','+j);
+  $('cellTitle').textContent=`Female ${R.cols[i]} where male is ${R.cols[j]}`;$('cellHint').hidden=!!e;
+  if(!e){L.innerHTML='<li class="empty">No species in this cell.</li>';return}
+  L.innerHTML=[...e].sort((a,b)=>a[0].localeCompare(b[0])).map(([s,ps])=>{const r=S.data.find(x=>x.species===s);
+    return `<li><button type="button" data-sp="${esc(s)}">${esc(s)}</button><small>${esc(r.order)} · ${esc(r.family)} · ${esc([...new Set(ps)].join(', '))}</small></li>`}).join('')}
+
+function renderSp(){
+  const r=S.data.find(x=>x.species===S.sp),T=$('spTable');if(!r){T.innerHTML='';$('spTitle').textContent='Species plumage';$('spHint').hidden=false;return}
+  $('spTitle').textContent=r.species;$('spHint').hidden=false;$('spHint').textContent=[r.sci,r.order,r.family].filter(Boolean).join(' · ');
+  const F=fem(r),pr=F!==r.female;
+  const parts=[...new Set([...Object.keys(r.male),...Object.keys(r.female)])];
+  const chips=l=>l&&l.length?`<div class="chips">${l.map(c=>`<span class="chip"><i style="background:${SW[c]||'#ccc'}"></i>${esc(c)}</span>`).join('')}</div>`:'<span class="ax">not described</span>';
+  T.innerHTML=`<table class="stack"><thead><tr><th>Part</th><th>Male</th><th>Female${pr?' (presumed = male)':''}</th></tr></thead><tbody>${parts.map(p=>`<tr><td>${esc(p)}</td><td>${chips(r.male[p])}</td><td>${chips(F[p])}</td></tr>`).join('')}</tbody></table>`}
+
+function fillSelects(){
+  const parts=partsOf(S.data);if(S.part!=='all'&&!parts.includes(S.part))S.part='all';
+  $('part').innerHTML=`<option value="all">All parts</option>`+parts.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');$('part').value=S.part;
+  const ords=[...new Set(S.data.map(r=>r.order))].sort();if(!ords.includes(S.ord))S.ord='all';
+  $('ord').innerHTML=`<option value="all">All orders (${S.data.length} spp.)</option>`+ords.map(o=>`<option value="${esc(o)}">${esc(o)} (${S.data.filter(r=>r.order===o).length})</option>`).join('');$('ord').value=S.ord;
+  const fams=[...new Set(S.data.filter(r=>S.ord==='all'||r.order===S.ord).map(r=>r.family))].sort();if(!fams.includes(S.fam))S.fam='all';
+  $('fam').innerHTML=`<option value="all">All families</option>`+fams.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join('');$('fam').value=S.fam;
+  $('part').disabled=S.mode==='body';
+  $('grp').hidden=!S.fams;$('grpName').textContent=S.fams?'Group: '+S.grpName:''}
+
+function setData(d,src){S.data=normalize(d);S.src=src;S.cell=null;S.sp=null;fillSelects();render();renderSp()}
+
+$('mode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.mode=b.dataset.v;for(const x of $('mode').children)x.setAttribute('aria-pressed',x===b);S.cell=null;fillSelects();render()});
+$('part').onchange=e=>{S.part=e.target.value;S.cell=null;render()};
+$('ord').onchange=e=>{S.fams=null;S.ord=e.target.value;S.fam='all';S.cell=null;fillSelects();render()};
+$('fam').onchange=e=>{S.fams=null;S.fam=e.target.value;S.cell=null;render()};
+$('norm').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.norm=b.dataset.v;for(const x of $('norm').children)x.setAttribute('aria-pressed',x===b);render()});
+$('wt').onchange=e=>{S.wt=e.target.value;render()};
+$('diagT').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.noDiag=b.dataset.v==='out';for(const x of $('diagT').children)x.setAttribute('aria-pressed',x===b);render()});
+$('pres').onchange=e=>{S.pres=e.target.checked;S.cell=null;render();renderSp()};
+const pick=t=>{const c=t.closest('.c');if(!c)return;S.cell=[+c.dataset.i,+c.dataset.j];render();if(innerWidth<760)$('cellTitle').scrollIntoView({behavior:'smooth'})};
+$('mx').addEventListener('click',e=>pick(e.target));
+$('mx').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(e.target)}});
+$('spList').addEventListener('click',e=>{const b=e.target.closest('button[data-sp]');if(!b)return;S.sp=b.dataset.sp;renderSp()});
+function loadText(t,name){try{t=t.trim();const d=t.startsWith('[')||t.startsWith('{')?[].concat(JSON.parse(t)):parseCSV(t);const n=normalize(d).length;if(!n)throw new Error('no usable species found');setData(d,name);$('msg').textContent=`Loaded ${n} species from ${name}.`}catch(err){$('msg').textContent='Could not load: '+err.message}}
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const fr=new FileReader();fr.onload=()=>loadText(fr.result,f.name);fr.readAsText(f)};
+$('load').onclick=()=>loadText($('paste').value,'pasted data');
+$('reset').onclick=()=>{if(FULL){setData(FULL,'full');$('msg').textContent='Full dataset restored.'}else{setData(PILOT,'pilot');$('msg').textContent='Pilot data restored.'}};
+const ro=new ResizeObserver(()=>{const w=$('mx').parentElement.clientWidth;if((w<560)!==$('mx').classList.contains('small'))render()});ro.observe($('mx').parentElement);
+
+// ---------- Patterns tab ----------
+const PARROTS=['Psittacidae','Psittaculidae','Cacatuidae','Strigopidae','Psittrichasiidae'];
+const FIG={
+  m1:{name:'all birds',fams:null,norm:'col',calls:[['green','yellow','of spots where the male is yellow (and the female differs), she is green'],['brown','yellow','… and only this share brown'],['brown','rufous','for comparison: rufous males, where brown is the usual female answer'],['brown','black','black males: brown again']]},
+  m2a:{name:'hummingbirds + parrots',fams:['Trochilidae',...PARROTS],norm:'share',calls:[['green','blue','hummingbirds + parrots: green female, blue male'],['blue','green','… and the reverse, blue female, green male'],['green','yellow','green female, yellow male'],['yellow','green','… and the reverse']]},
+  m2b:{name:'manakins + tanagers + finches',fams:['Pipridae','Thraupidae','Fringillidae'],norm:'share',calls:[['green','blue','manakins, tanagers, finches: green female, blue male'],['blue','green','… the reverse is nearly absent'],['green','black','the biggest cell of all: green female, black male']]},
+  m3:{name:'hummingbirds + sunbirds',fams:['Trochilidae','Nectariniidae'],norm:'share',calls:[['white','green','white female where the male is green'],['grey','green','grey female where the male is green'],['green','purple','green female, purple male'],['purple','green','… the reverse barely exists']]}
+};
+function matFor(o){
+  const cols=colorsOf(FULL||S.data),n=cols.length,ix=Object.fromEntries(cols.map((c,i)=>[c,i])),M=Array.from({length:n},()=>Array(n).fill(0)),fs=o.fams&&new Set(o.fams);let spp=0;
+  for(const r of normalize(FULL||[])){if(fs&&!fs.has(r.family))continue;let u=0;
+    for(const p in r.male){const f=r.female[p],m=r.male[p];if(!f||!f.length)continue;u=1;const w=1/(m.length*f.length);
+      for(const a of f)for(const b of m)if(a!==b)M[ix[a]][ix[b]]+=w}spp+=u}
+  const rs=M.map(r=>r.reduce((a,b)=>a+b,0)),cs=cols.map((_,j)=>M.reduce((a,r)=>a+r[j],0)),T=rs.reduce((a,b)=>a+b,0);
+  const val=(i,j)=>o.norm==='row'?(rs[i]?100*M[i][j]/rs[i]:0):o.norm==='col'?(cs[j]?100*M[i][j]/cs[j]:0):(T?100*M[i][j]/T:0);
+  return {cols,ix,val,spp}}
+let badgeNo={};
+function drawFig(id){
+  const o=FIG[id],g=$(id),R2=matFor(o),{cols,ix,val}=R2,n=cols.length;
+  const marks={};o.calls.forEach((c,k)=>marks[ix[c[0]]+','+ix[c[1]]]=badgeNo[id][k]);
+  let mx=0;for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(i!==j)mx=Math.max(mx,val(i,j));
+  const tight=g.clientWidth<430;g.classList.toggle('tight',tight);
+  g.style.gridTemplateColumns=`20px ${tight?'58px':'70px'} repeat(${n},minmax(0,1fr))`;
+  let h=`<div></div><div></div><div class="axl" style="grid-column:span ${n}">Male ♂</div><div class="axl f" style="grid-row:span ${n+1}">Female ♀</div><div class="corner"></div>`+cols.map(c=>`<div class="ch"><span>${esc(c)}</span><i style="background:${SW[c]||'#ccc'}"></i></div>`).join('');
+  const f1=v=>!v?'':v>=9.95?Math.round(v):v.toFixed(1);
+  for(let i=0;i<n;i++){h+=`<div class="rh"><i style="background:${SW[cols[i]]||'#ccc'}"></i>${esc(cols[i])}</div>`;
+    for(let j=0;j<n;j++){if(i===j){h+='<div class="c off"></div>';continue}
+      const v=val(i,j),a=mx?v/mx:0,k=marks[i+','+j],bg=v?`background:color-mix(in srgb,var(--ink) ${Math.round(8+a*87)}%,var(--bg))`:'';
+      h+=`<div class="c${a>.5?' hot':''}${k?' mark':''}" style="${bg}">${f1(v)}${k?`<b class="badge">${k}</b>`:''}</div>`}}
+  g.innerHTML=h;
+  document.querySelector(`[data-set="${id}"]`).textContent=`${R2.spp.toLocaleString()} species · same body part · ${o.norm==='col'?'% of male color':o.norm==='row'?'% of female color':'% of all'} · diagonal excluded`;
+  return R2}
+function drawPatterns(){
+  if(!FULL)return;badgeNo={};let k=0;const lists={};
+  for(const ol of document.querySelectorAll('ol.co')){const ids=ol.dataset.for.split(',');let items='';
+    for(const id of ids){badgeNo[id]=FIG[id].calls.map(()=>++k)}
+    for(const id of ids){const R2=drawFig(id);FIG[id].calls.forEach((c,q)=>{const v=R2.val(R2.ix[c[0]],R2.ix[c[1]]);
+      items+=`<li><b class="n">${badgeNo[id][q]}</b><span><strong>${v>=9.95?Math.round(v):v.toFixed(1)}%</strong> — ${esc(c[2])}</span></li>`})}
+    ol.innerHTML=items;k=k}}
+function syncSeg(id,v){for(const x of $(id).children)x.setAttribute('aria-pressed',x.dataset.v===v)}
+function openFig(id){const o=FIG[id];S.ord='all';S.fam='all';S.part='all';S.mode='part';S.wt='spot';S.pres=false;S.noDiag=true;S.norm=o.norm;
+  S.fams=o.fams?new Set(o.fams):null;S.grpName=o.name;S.cell=null;
+  syncSeg('mode','part');syncSeg('norm',o.norm);syncSeg('diagT','out');$('wt').value='spot';$('pres').checked=false;
+  if(FULL&&S.src!=='full'){S.data=normalize(FULL);S.src='full'}
+  location.hash='explorer';fillSelects();render();renderSp()}
+document.addEventListener('click',e=>{const b=e.target.closest('button[data-go]');if(b)openFig(b.dataset.go)});
+$('grpX').onclick=()=>{S.fams=null;fillSelects();render()};
+function route(){const p=location.hash==='#patterns';$('viewP').hidden=!p;$('viewE').hidden=p;
+  $('tabP').toggleAttribute('aria-current',p);$('tabE').toggleAttribute('aria-current',!p);
+  if(p){$('tabP').setAttribute('aria-current','page');drawPatterns()}else{$('tabE').setAttribute('aria-current','page');if(R)render()}}
+addEventListener('hashchange',route);
+const ro2=new ResizeObserver(()=>{if(!$('viewP').hidden)drawPatterns()});ro2.observe($('viewP'));
+$('stats').innerHTML='<div><b>…</b><span>loading species</span></div>';
+fetch('plumage.json').then(r=>{if(!r.ok)throw 0;return r.json()}).then(d=>{FULL=d;setData(d,'full');route()}).catch(()=>{setData(PILOT,'pilot');route()});
+}
+</script>
+</body>
+</html>
